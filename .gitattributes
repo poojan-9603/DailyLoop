@@ -1,0 +1,3 @@
+# Normalize line endings on commit; checkout uses platform default.
+* text=auto eol=lf
+*.bat text eol=crlf

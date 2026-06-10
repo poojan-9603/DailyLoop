@@ -1,0 +1,232 @@
+// TSA OS — Prisma schema. Implements CLAUDE.md exactly; extend only additively.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  STUDENT
+  COACH
+  PARENT
+  ADMIN
+}
+
+enum MetricType {
+  TIME
+  REPS
+  WEIGHT
+  DISTANCE
+}
+
+enum InsightType {
+  PLATEAU
+  IMPROVEMENT
+  CONSISTENCY
+  CROSS_DOMAIN
+}
+
+model Organization {
+  id              String    @id @default(cuid())
+  name            String
+  slackWebhookUrl String?
+  notionToken     String?
+  notionDatabaseId String?
+  users           User[]
+  subjects        Subject[]
+  createdAt       DateTime  @default(now())
+}
+
+model User {
+  id            String    @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  role          Role      @default(STUDENT)
+  lastSeenAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  student       Student?
+  coach         Coach?
+  accounts      Account[]
+  sessions      Session[]
+  parentLinks   ParentStudent[] @relation("ParentLinks")
+  auditLogs     AuditLog[]
+
+  @@index([orgId])
+}
+
+model Student {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gradeLevel Int
+  sports     String[]
+
+  studyPlans       StudyPlan[]
+  trainingSessions TrainingSession[]
+  insights         Insight[]
+  digests          Digest[]
+  parentLinks      ParentStudent[] @relation("StudentLinks")
+}
+
+model Coach {
+  id             String  @id @default(cuid())
+  userId         String  @unique
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialization String
+
+  trainingSessions TrainingSession[]
+}
+
+model ParentStudent {
+  parentUserId String
+  parentUser   User    @relation("ParentLinks", fields: [parentUserId], references: [id], onDelete: Cascade)
+  studentId    String
+  student      Student @relation("StudentLinks", fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@id([parentUserId, studentId])
+  @@index([studentId])
+}
+
+model Subject {
+  id         String   @id @default(cuid())
+  orgId      String
+  org        Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name       String
+  gradeLevel Int
+
+  studyTasks StudyTask[]
+
+  @@index([orgId, gradeLevel])
+}
+
+model StudyPlan {
+  id            String      @id @default(cuid())
+  studentId     String
+  student       Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date          DateTime    @db.Date
+  totalMinutes  Int
+  aiModel       String?
+  promptVersion String?
+  createdAt     DateTime    @default(now())
+
+  tasks         StudyTask[]
+
+  @@unique([studentId, date])
+  @@index([studentId, date])
+}
+
+model StudyTask {
+  id             String    @id @default(cuid())
+  planId         String
+  plan           StudyPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        Subject   @relation(fields: [subjectId], references: [id])
+  title          String
+  plannedMinutes Int
+  actualMinutes  Int?
+  completed      Boolean   @default(false)
+  completedAt    DateTime?
+  reason         String?
+  sortOrder      Int       @default(0)
+
+  @@index([planId])
+}
+
+model TrainingSession {
+  id         String     @id @default(cuid())
+  coachId    String
+  coach      Coach      @relation(fields: [coachId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date       DateTime   @db.Date
+  drill      String
+  metricType MetricType
+  value      Float
+  unit       String
+  notes      String?
+  rawInput   String?
+  createdAt  DateTime   @default(now())
+
+  @@index([studentId, date])
+  @@index([coachId, date])
+}
+
+model Insight {
+  id          String      @id @default(cuid())
+  studentId   String
+  student     Student     @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  type        InsightType
+  content     String
+  createdAt   DateTime    @default(now())
+  dismissedAt DateTime?
+
+  @@index([studentId, createdAt])
+}
+
+model Digest {
+  id        String    @id @default(cuid())
+  studentId String
+  student   Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  date      DateTime  @db.Date
+  content   String
+  emailedAt DateTime?
+  openedAt  DateTime?
+
+  @@index([studentId, date])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  entity    String
+  entityId  String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+// ---- Auth.js (NextAuth v5) adapter models ----
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
