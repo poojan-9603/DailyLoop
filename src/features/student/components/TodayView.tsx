@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { experimental_useObject as useObject } from "ai/react";
-import { Sparkles, RefreshCw, Dumbbell, AlertCircle } from "lucide-react";
+import { Sparkles, RefreshCw, Dumbbell, AlertCircle, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -27,9 +27,27 @@ type TrainingSession = {
 // ---------------------------------------------------------------------------
 // Afternoon flip panel
 // ---------------------------------------------------------------------------
-function AfternoonFlip({ sessions }: { sessions: TrainingSession[] }) {
+function AfternoonFlip({
+  sessions,
+  onBack,
+  onRegenerate,
+  regenerating,
+}: {
+  sessions: TrainingSession[];
+  onBack: () => void;
+  onRegenerate: () => void;
+  regenerating: boolean;
+}) {
   return (
     <div className="flex flex-col items-center gap-6 py-10 text-center">
+      {/* Back to academics — never strand the student on the flip view */}
+      <div className="w-full max-w-sm self-start">
+        <Button variant="ghost" size="sm" className="gap-1.5 text-muted-foreground" onClick={onBack}>
+          <ArrowLeft className="h-4 w-4" />
+          Back to academics
+        </Button>
+      </div>
+
       <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 text-orange-500">
         <Dumbbell className="h-8 w-8" />
       </div>
@@ -58,6 +76,17 @@ function AfternoonFlip({ sessions }: { sessions: TrainingSession[] }) {
           No training scheduled for this afternoon.
         </div>
       )}
+
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5"
+        onClick={onRegenerate}
+        disabled={regenerating}
+      >
+        <RefreshCw className="h-3 w-3" />
+        Plan a new study block
+      </Button>
     </div>
   );
 }
@@ -180,6 +209,14 @@ export function TodayView() {
     completeTask.mutate({ taskId, completed });
   }
 
+  // Regenerate always exits the flip first so the user is never stranded on the
+  // afternoon view while a new plan streams in.
+  function handleRegenerate() {
+    setShowFlip(false);
+    sawIncompleteRef.current = false;
+    startStream({});
+  }
+
   function handleTimerStop(taskId: string, totalSeconds: number) {
     updateMinutes.mutate({ taskId, actualMinutes: Math.round(totalSeconds / 60) });
   }
@@ -219,7 +256,12 @@ export function TodayView() {
           showFlip ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
         )}
       >
-        <AfternoonFlip sessions={training ?? []} />
+        <AfternoonFlip
+          sessions={training ?? []}
+          onBack={() => setShowFlip(false)}
+          onRegenerate={handleRegenerate}
+          regenerating={isStreaming}
+        />
       </div>
     );
   }
@@ -306,7 +348,7 @@ export function TodayView() {
               variant="ghost"
               size="sm"
               className="ml-auto h-auto py-0 text-yellow-700"
-              onClick={() => startStream({})}
+              onClick={handleRegenerate}
               disabled={isStreaming}
             >
               <RefreshCw className="mr-1 h-3 w-3" />
@@ -366,7 +408,7 @@ export function TodayView() {
               variant="ghost"
               size="sm"
               className="gap-1.5 text-muted-foreground"
-              onClick={() => startStream({})}
+              onClick={handleRegenerate}
               disabled={isStreaming}
             >
               <RefreshCw className="h-3 w-3" />
