@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { experimental_useObject as useObject } from "ai/react";
 import { Sparkles, RefreshCw, Dumbbell, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -80,11 +80,18 @@ export function TodayView() {
   const [isFallback, setIsFallback] = useState(false);
   const [showFlip, setShowFlip] = useState(false);
 
-  // Detect "all tasks complete" → trigger flip
+  // The flip is a reward for finishing the last task IN THIS SESSION — it must
+  // not auto-trigger when a plan loads already-complete (e.g. yesterday's demo
+  // plan), which would dead-end on "Academics done / no training scheduled".
+  const sawIncompleteRef = useRef(false);
   useEffect(() => {
-    if (!plan) return;
-    const allDone = plan.tasks.length > 0 && plan.tasks.every((t) => t.completed);
-    if (allDone) setShowFlip(true);
+    if (!plan || plan.tasks.length === 0) return;
+    const allDone = plan.tasks.every((t) => t.completed);
+    if (!allDone) {
+      sawIncompleteRef.current = true;
+    } else if (sawIncompleteRef.current) {
+      setShowFlip(true);
+    }
   }, [plan]);
 
   // --- Mutations ---
@@ -323,7 +330,13 @@ export function TodayView() {
               {completedCount}/{totalCount} tasks · {totalPlanned} min planned
             </p>
             {totalCount > 0 && completedCount === totalCount && (
-              <p className="mt-1 text-sm font-medium text-primary">All done! Flip to training →</p>
+              <button
+                type="button"
+                onClick={() => setShowFlip(true)}
+                className="mt-1 text-sm font-medium text-primary hover:underline"
+              >
+                All done! Flip to training →
+              </button>
             )}
           </div>
         </div>

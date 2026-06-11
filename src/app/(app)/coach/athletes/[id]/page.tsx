@@ -7,12 +7,19 @@ import Link from "next/link";
 import { api } from "@/trpc/react";
 import { InsightCard } from "@/features/coach/components/InsightCard";
 
-// Recharts is client-only and heavy — load the chart without SSR.
+// Recharts is client-only and heavy — load the charts without SSR.
 const DrillChart = dynamic(
   () => import("@/features/coach/components/DrillChart").then((m) => m.DrillChart),
   {
     ssr: false,
     loading: () => <div className="h-48 w-full animate-pulse rounded-xl bg-secondary/40" />,
+  },
+);
+const CorrelationChart = dynamic(
+  () => import("@/features/coach/components/CorrelationChart").then((m) => m.CorrelationChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-56 w-full animate-pulse rounded-xl bg-secondary/40" />,
   },
 );
 import { Button } from "@/components/ui/button";
@@ -85,6 +92,21 @@ export default function AthleteDetailPage({ params }: Props) {
         </h2>
         <div className="rounded-xl border bg-card p-4">
           <DrillChart drills={data.drills} />
+        </div>
+      </section>
+
+      {/* Cross-domain correlation — the product thesis, made visible */}
+      <section>
+        <div className="mb-3 flex items-center gap-2">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            Academic ↔ Athletic Link
+          </h2>
+          <Badge variant="secondary" className="text-[10px]">
+            Cross-domain
+          </Badge>
+        </div>
+        <div className="rounded-xl border bg-card p-4">
+          <CorrelationChart studentId={id} studentName={data.student.name} />
         </div>
       </section>
 

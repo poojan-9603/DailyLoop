@@ -227,6 +227,102 @@ export const coachRouter = createTRPCRouter({
       };
     }),
 
+  /**
+   * Cross-domain correlation (the product thesis, visualized): for each day in
+   * the last 21 days, pair that day's academic study-completion % with the
+   * athlete's performance on a chosen drill, and compute the Pearson
+   * correlation. Proves "academics and athletics feed each other".
+   */
+  crossDomain: coachProcedure
+    .input(z.object({ studentId: z.string(), drill: z.string().optional() }))
+    .query(async ({ ctx, input }) => {
+      const coach = await requireCoach(ctx.db, ctx.user.id);
+      const student = await ctx.db.student.findFirst({
+        where: { id: input.studentId, user: { orgId: coach.user.orgId } },
+      });
+      if (!student) throw new TRPCError({ code: "NOT_FOUND" });
+
+      const since = new Date();
+      since.setDate(since.getDate() - 21);
+      since.setHours(0, 0, 0, 0);
+
+      const [plans, sessions] = await Promise.all([
+        ctx.db.studyPlan.findMany({
+          where: { studentId: input.studentId, date: { gte: since } },
+          include: { tasks: { select: { completed: true } } },
+        }),
+        ctx.db.trainingSession.findMany({
+          where: { studentId: input.studentId, date: { gte: since } },
+          orderBy: { date: "asc" },
+        }),
+      ]);
+
+      // Available drills, sorted by frequency (most-logged first).
+      const drillCounts = new Map<string, number>();
+      for (const s of sessions) drillCounts.set(s.drill, (drillCounts.get(s.drill) ?? 0) + 1);
+      const drills = [...drillCounts.entries()].sort((a, b) => b[1] - a[1]).map(([d]) => d);
+      const selectedDrill = input.drill && drills.includes(input.drill) ? input.drill : drills[0];
+
+      // Map ISO date -> study completion %.
+      const completionByDate = new Map<string, number>();
+      for (const plan of plans) {
+        const key = plan.date.toISOString().split("T")[0]!;
+        const total = plan.tasks.length;
+        const done = plan.tasks.filter((t) => t.completed).length;
+        completionByDate.set(key, total > 0 ? Math.round((done / total) * 100) : 0);
+      }
+
+      // Pair each session of the selected drill with that day's completion %.
+      let unit = "";
+      let metricType = "TIME";
+      const points: Array<{ date: string; completionPct: number; metricValue: number }> = [];
+      for (const s of sessions) {
+        if (selectedDrill && s.drill !== selectedDrill) continue;
+        const key = s.date.toISOString().split("T")[0]!;
+        const completionPct = completionByDate.get(key);
+        if (completionPct === undefined) continue;
+        unit = s.unit;
+        metricType = s.metricType;
+        points.push({ date: key, completionPct, metricValue: s.value });
+      }
+
+      // Pearson correlation coefficient.
+      const n = points.length;
+      let r: number | null = null;
+      if (n >= 3) {
+        const xs = points.map((p) => p.completionPct);
+        const ys = points.map((p) => p.metricValue);
+        const mx = xs.reduce((a, b) => a + b, 0) / n;
+        const my = ys.reduce((a, b) => a + b, 0) / n;
+        let num = 0;
+        let dx = 0;
+        let dy = 0;
+        for (let i = 0; i < n; i++) {
+          const a = xs[i]! - mx;
+          const b = ys[i]! - my;
+          num += a * b;
+          dx += a * a;
+          dy += b * b;
+        }
+        const denom = Math.sqrt(dx * dy);
+        r = denom === 0 ? 0 : num / denom;
+      }
+
+      // For TIME metrics a lower value is better, so a negative r (slower when
+      // study drops) is the "good academics → good athletics" signal.
+      const lowerIsBetter = metricType === "TIME";
+
+      return {
+        drill: selectedDrill ?? null,
+        drills,
+        unit,
+        metricType,
+        lowerIsBetter,
+        points,
+        correlation: r,
+      };
+    }),
+
   /** Dismiss an insight. */
   dismissInsight: coachProcedure
     .input(z.object({ insightId: z.string() }))
