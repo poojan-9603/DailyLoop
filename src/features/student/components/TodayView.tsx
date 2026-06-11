@@ -1,0 +1,405 @@
+"use client";
+
+import { useState, useEffect } from "react";
+import { experimental_useObject as useObject } from "ai/react";
+import { Sparkles, RefreshCw, Sun, Dumbbell, AlertCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { api } from "@/trpc/react";
+import { toast } from "@/hooks/use-toast";
+import { track } from "@/lib/analytics";
+import { PlanOutputSchema } from "@/ai/schemas";
+import { TaskCard } from "./TaskCard";
+import { ProgressRing } from "./ProgressRing";
+
+// ---------------------------------------------------------------------------
+// Types mirroring Prisma results
+// ---------------------------------------------------------------------------
+type DbTask = {
+  id: string;
+  title: string;
+  plannedMinutes: number;
+  actualMinutes: number | null;
+  completed: boolean;
+  reason: string | null;
+  subject: { name: string };
+};
+
+type DbPlan = {
+  id: string;
+  totalMinutes: number;
+  tasks: DbTask[];
+};
+
+type TrainingSession = {
+  id: string;
+  drill: string;
+  value: number;
+  unit: string;
+  coach: { user: { name: string | null } };
+};
+
+// ---------------------------------------------------------------------------
+// Afternoon flip panel
+// ---------------------------------------------------------------------------
+function AfternoonFlip({ sessions }: { sessions: TrainingSession[] }) {
+  return (
+    <div className="flex flex-col items-center gap-6 py-10 text-center">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-orange-100 text-orange-500">
+        <Dumbbell className="h-8 w-8" />
+      </div>
+      <div>
+        <h2 className="text-2xl font-bold">Academics done!</h2>
+        <p className="mt-1 text-muted-foreground">Time to train. Great focus today.</p>
+      </div>
+      {sessions.length > 0 ? (
+        <div className="w-full max-w-sm rounded-lg border bg-card p-4 text-left">
+          <p className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Today&apos;s training
+          </p>
+          <ul className="space-y-2">
+            {sessions.map((s) => (
+              <li key={s.id} className="text-sm">
+                <span className="font-medium">{s.drill}</span>{" "}
+                <span className="text-muted-foreground">
+                  — {s.value} {s.unit} · Coach {s.coach.user.name ?? "TBA"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : (
+        <div className="rounded-lg border border-dashed bg-muted/30 px-6 py-4 text-sm text-muted-foreground">
+          No sessions logged yet today — check back after training.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Evening summary
+// ---------------------------------------------------------------------------
+function EveningSummary({ plan }: { plan: DbPlan }) {
+  const done = plan.tasks.filter((t) => t.completed).length;
+  const total = plan.tasks.length;
+  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  return (
+    <div className="flex flex-col items-center gap-4 py-10 text-center">
+      <Sun className="h-10 w-10 text-yellow-400" />
+      <div>
+        <h2 className="text-xl font-bold">Day complete</h2>
+        <p className="mt-1 text-muted-foreground">
+          {done}/{total} tasks · {pct}% completion
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+export function TodayView() {
+  const utils = api.useUtils();
+
+  // --- Server state ---
+  const { data: plan, isLoading: planLoading } = api.student.todayPlan.useQuery();
+  const { data: training } = api.student.todayTraining.useQuery();
+
+  // --- Local state ---
+  const [isFallback, setIsFallback] = useState(false);
+  const [showFlip, setShowFlip] = useState(false);
+
+  // Detect "all tasks complete" → trigger flip
+  useEffect(() => {
+    if (!plan) return;
+    const allDone = plan.tasks.length > 0 && plan.tasks.every((t) => t.completed);
+    if (allDone) setShowFlip(true);
+  }, [plan]);
+
+  // Detect evening (after 18:00 local)
+  const isEvening = new Date().getHours() >= 18;
+
+  // --- Mutations ---
+  const persistPlan = api.student.persistPlan.useMutation({
+    onSuccess: () => {
+      void utils.student.todayPlan.invalidate();
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Couldn't save plan", description: "Please try again." });
+    },
+  });
+
+  const fallbackMutation = api.student.fallbackPlan.useMutation({
+    onSuccess: () => {
+      setIsFallback(true);
+      void utils.student.todayPlan.invalidate();
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Fallback failed", description: "Please refresh and try again." });
+    },
+  });
+
+  const completeTask = api.student.completeTask.useMutation({
+    onSuccess: (updated) => {
+      void utils.student.todayPlan.invalidate();
+      if (updated.completed) {
+        track("task_completed", { taskId: updated.id });
+      }
+    },
+    onError: () => {
+      toast({ variant: "destructive", title: "Couldn't update task" });
+    },
+  });
+
+  const updateMinutes = api.student.updateActualMinutes.useMutation();
+
+  // --- Streaming ---
+  const {
+    object: streamingPlan,
+    isLoading: isStreaming,
+    submit: startStream,
+    error: streamError,
+  } = useObject({
+    api: "/api/ai/generate-plan",
+    schema: PlanOutputSchema,
+    onFinish: ({ object, error }) => {
+      if (error || !object) {
+        // Streaming failed — load fallback
+        fallbackMutation.mutate();
+        return;
+      }
+      track("plan_generated", { taskCount: object.tasks.length });
+      persistPlan.mutate({
+        tasks: object.tasks.map((t) => ({
+          subjectId: t.subjectId,
+          subjectName: t.subjectName,
+          title: t.title,
+          plannedMinutes: t.plannedMinutes,
+          reason: t.reason,
+        })),
+      });
+    },
+    onError: () => {
+      fallbackMutation.mutate();
+    },
+  });
+
+  // Also fall back if streamError surfaces
+  useEffect(() => {
+    if (streamError && !fallbackMutation.isPending && !plan) {
+      fallbackMutation.mutate();
+    }
+  }, [streamError]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ---------------------------------------------------------------------------
+  // Render helpers
+  // ---------------------------------------------------------------------------
+
+  function handleToggle(taskId: string, completed: boolean) {
+    completeTask.mutate({ taskId, completed });
+  }
+
+  function handleTimerStop(taskId: string, totalSeconds: number) {
+    updateMinutes.mutate({ taskId, actualMinutes: Math.round(totalSeconds / 60) });
+  }
+
+  // Progress ring: % of total planned minutes that are completed
+  const completedMinutes = (plan?.tasks ?? [])
+    .filter((t) => t.completed)
+    .reduce((s, t) => s + t.plannedMinutes, 0);
+  const totalPlanned = plan?.totalMinutes ?? 120;
+  const progressPct = Math.round((completedMinutes / totalPlanned) * 100);
+
+  const completedCount = (plan?.tasks ?? []).filter((t) => t.completed).length;
+  const totalCount = plan?.tasks.length ?? 0;
+
+  // ---------------------------------------------------------------------------
+  // SKELETON — initial load
+  // ---------------------------------------------------------------------------
+  if (planLoading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+        <Skeleton className="h-24 w-full rounded-lg" />
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // EVENING STATE (after 18:00, plan exists)
+  // ---------------------------------------------------------------------------
+  if (isEvening && plan && !showFlip) {
+    return <EveningSummary plan={plan} />;
+  }
+
+  // ---------------------------------------------------------------------------
+  // FLIP — all tasks complete
+  // ---------------------------------------------------------------------------
+  if (showFlip) {
+    return (
+      <div
+        className={cn(
+          "transition-all duration-500 ease-in-out",
+          showFlip ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+        )}
+      >
+        <AfternoonFlip sessions={training ?? []} />
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // NO PLAN + STREAMING in progress — show tasks as they arrive
+  // ---------------------------------------------------------------------------
+  if (isStreaming) {
+    const streamedTasks = streamingPlan?.tasks ?? [];
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Sparkles className="h-4 w-4 animate-pulse text-primary" />
+          Building your study plan…
+        </div>
+        <div className="space-y-3">
+          {streamedTasks.map((t, i) => (
+            <TaskCard
+              key={i}
+              id={String(i)}
+              title={t?.title ?? "…"}
+              subjectName={t?.subjectName ?? "…"}
+              plannedMinutes={t?.plannedMinutes ?? 0}
+              reason={t?.reason ?? null}
+              completed={false}
+              onToggle={() => {}}
+              onTimerStop={() => {}}
+              streaming
+            />
+          ))}
+          {/* placeholder for the next task being generated */}
+          <div className="flex items-center gap-3 rounded-lg border bg-card p-4">
+            <Skeleton className="h-5 w-5 rounded-full" />
+            <div className="flex-1 space-y-2">
+              <Skeleton className="h-4 w-3/4" />
+              <Skeleton className="h-3 w-1/2" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // NO PLAN — "Generate my 2 hours" CTA
+  // ---------------------------------------------------------------------------
+  if (!plan && !isStreaming) {
+    return (
+      <div className="flex flex-col items-center gap-6 py-10 text-center">
+        <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+          <Sparkles className="h-8 w-8 text-primary" />
+        </div>
+        <div>
+          <h2 className="text-2xl font-bold">Good morning!</h2>
+          <p className="mt-1 text-muted-foreground">
+            Let AI plan your 2-hour study block &mdash; tailored to what you need most today.
+          </p>
+        </div>
+        <Button
+          size="lg"
+          onClick={() => startStream({})}
+          disabled={isStreaming || persistPlan.isPending}
+          className="gap-2"
+        >
+          <Sparkles className="h-4 w-4" />
+          Generate my 2 hours
+        </Button>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // PLAN EXISTS — checklist
+  // ---------------------------------------------------------------------------
+  if (plan) {
+    return (
+      <div className="space-y-6">
+        {/* Fallback banner */}
+        {isFallback && (
+          <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            <span>We reused yesterday&apos;s plan &mdash; AI was temporarily unavailable.</span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="ml-auto h-auto py-0 text-yellow-700"
+              onClick={() => startStream({})}
+              disabled={isStreaming}
+            >
+              <RefreshCw className="mr-1 h-3 w-3" />
+              Regenerate
+            </Button>
+          </div>
+        )}
+
+        {/* Progress ring + header */}
+        <div className="flex items-center gap-5">
+          <ProgressRing
+            value={progressPct}
+            size={88}
+            strokeWidth={8}
+            label={`${progressPct}%`}
+            sublabel="done"
+          />
+          <div>
+            <h2 className="text-lg font-semibold">Today&apos;s study block</h2>
+            <p className="text-sm text-muted-foreground">
+              {completedCount}/{totalCount} tasks · {totalPlanned} min planned
+            </p>
+            {totalCount > 0 && completedCount === totalCount && (
+              <p className="mt-1 text-sm font-medium text-primary">All done! Flip to training →</p>
+            )}
+          </div>
+        </div>
+
+        {/* Task list */}
+        <div className="space-y-3">
+          {plan.tasks.map((task) => (
+            <TaskCard
+              key={task.id}
+              id={task.id}
+              title={task.title}
+              subjectName={task.subject.name}
+              plannedMinutes={task.plannedMinutes}
+              reason={task.reason}
+              completed={task.completed}
+              actualMinutes={task.actualMinutes}
+              onToggle={handleToggle}
+              onTimerStop={handleTimerStop}
+            />
+          ))}
+        </div>
+
+        {/* Re-generate option (after plan saved) */}
+        {!isFallback && (
+          <div className="pt-2 text-center">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-muted-foreground"
+              onClick={() => startStream({})}
+              disabled={isStreaming}
+            >
+              <RefreshCw className="h-3 w-3" />
+              Regenerate plan
+            </Button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return null;
+}

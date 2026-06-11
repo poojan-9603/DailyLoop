@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 
 import { PostHogProvider } from "@/components/providers/posthog-provider";
 import { TRPCReactProvider } from "@/trpc/react";
+import { Toaster } from "@/components/ui/toaster";
 
 import "./globals.css";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="flex min-h-full flex-col">
         <PostHogProvider>
           <TRPCReactProvider>{children}</TRPCReactProvider>
+          <Toaster />
         </PostHogProvider>
       </body>
     </html>
