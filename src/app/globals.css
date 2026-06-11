@@ -68,3 +68,23 @@
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+@layer utilities {
+  /* Emerald → teal gradient text for hero accents. */
+  .text-gradient {
+    @apply bg-gradient-to-br from-accent to-teal-600 bg-clip-text text-transparent;
+  }
+
+  /* Subtle dotted grid backdrop for hero / marketing sections. */
+  .bg-dot-grid {
+    background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  /* Soft radial glow used behind hero content. */
+  .bg-hero-glow {
+    background:
+      radial-gradient(40rem 24rem at 50% -8%, hsl(160 84% 39% / 0.10), transparent 70%),
+      radial-gradient(28rem 18rem at 85% 10%, hsl(199 89% 48% / 0.08), transparent 70%);
+  }
+}

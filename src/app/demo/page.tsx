@@ -5,9 +5,16 @@ import { DemoRoleCards } from "@/features/demo/DemoRoleCards";
 
 export default function DemoPage({ searchParams }: { searchParams: { error?: string } }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-4 py-12">
+    <main className="relative mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-4 py-12">
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-hero-glow" />
+      <div className="pointer-events-none fixed inset-0 -z-10 bg-dot-grid opacity-50 [mask-image:radial-gradient(36rem_28rem_at_50%_30%,black,transparent)]" />
       <div className="mb-8 text-center">
-        <h1 className="text-3xl font-bold tracking-tight">View TSA OS as…</h1>
+        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-base font-bold text-primary-foreground shadow-sm">
+          T
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">
+          View TSA OS as<span className="text-gradient">…</span>
+        </h1>
         <p className="mt-2 text-muted-foreground">
           One daily loop, four roles. Pick a seat — no account required.
         </p>
