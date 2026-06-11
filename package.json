@@ -13,7 +13,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
-    "evals": "tsx --env-file=.env.local evals/run.ts",
+    "evals": "tsx evals/run.ts",
     "demo:refresh": "tsx --env-file=.env.local scripts/refresh-demo-dates.ts",
     "postinstall": "prisma generate"
   },
@@ -64,6 +64,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^17.4.2",
     "eslint": "^8.57.1",
     "eslint-config-next": "^14.2.18",
     "eslint-config-prettier": "^9.1.0",

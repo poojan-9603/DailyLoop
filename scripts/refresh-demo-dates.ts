@@ -5,6 +5,12 @@
  * Usage: npx tsx --env-file=.env.local scripts/refresh-demo-dates.ts
  */
 
+import { config } from "dotenv";
+import { resolve } from "path";
+
+config({ path: resolve(process.cwd(), ".env") });
+config({ path: resolve(process.cwd(), ".env.local"), override: true });
+
 import { PrismaClient } from "@prisma/client";
 
 const db = new PrismaClient();

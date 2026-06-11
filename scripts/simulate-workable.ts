@@ -4,6 +4,12 @@
  * Usage: npx tsx --env-file=.env.local scripts/simulate-workable.ts
  */
 
+import { config } from "dotenv";
+import { resolve } from "path";
+
+config({ path: resolve(process.cwd(), ".env") });
+config({ path: resolve(process.cwd(), ".env.local"), override: true });
+
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const SECRET = process.env.WORKABLE_WEBHOOK_SECRET ?? "";
 

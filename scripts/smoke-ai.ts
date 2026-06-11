@@ -3,6 +3,12 @@
  * Run: npx tsx --env-file=.env.local scripts/smoke-ai.ts
  * Keep this as a utility; do not delete.
  */
+import { config } from "dotenv";
+import { resolve } from "path";
+
+config({ path: resolve(process.cwd(), ".env") });
+config({ path: resolve(process.cwd(), ".env.local"), override: true });
+
 import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { z } from "zod";

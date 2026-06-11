@@ -5,6 +5,12 @@
  * Usage: npm run evals
  */
 
+import { config } from "dotenv";
+import { resolve } from "path";
+
+config({ path: resolve(process.cwd(), ".env") });
+config({ path: resolve(process.cwd(), ".env.local"), override: true });
+
 import { generateObject } from "ai";
 import { anthropic } from "@ai-sdk/anthropic";
 import { PlanOutputSchema } from "../src/ai/schemas";
@@ -128,7 +134,7 @@ async function runEval(profile: Profile): Promise<EvalResult> {
 
 async function main() {
   if (!process.env.ANTHROPIC_API_KEY) {
-    console.error("ANTHROPIC_API_KEY required to run evals.");
+    console.error("ANTHROPIC_API_KEY not set");
     process.exit(1);
   }
 
