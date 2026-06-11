@@ -1,43 +1,7 @@
-import { GraduationCap, Users, Dumbbell, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 
-import type { Role } from "@prisma/client";
-
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { enterDemo } from "@/server/auth/demo";
-
-const ROLES: Array<{
-  role: Role;
-  title: string;
-  blurb: string;
-  Icon: typeof GraduationCap;
-}> = [
-  {
-    role: "STUDENT",
-    title: "Student",
-    blurb: "Generate an AI 2-hour study plan, then flip to today's training.",
-    Icon: GraduationCap,
-  },
-  {
-    role: "COACH",
-    title: "Coach",
-    blurb: "Smart-log sessions in seconds and see athlete progress + insights.",
-    Icon: Dumbbell,
-  },
-  {
-    role: "PARENT",
-    title: "Parent",
-    blurb: "A warm, read-only view of your child's academic + athletic day.",
-    Icon: Users,
-  },
-  {
-    role: "ADMIN",
-    title: "Admin",
-    blurb: "Attention-first dashboard, roster, and integrations.",
-    Icon: ShieldCheck,
-  },
-];
+import { DemoRoleCards } from "@/features/demo/DemoRoleCards";
 
 export default function DemoPage({ searchParams }: { searchParams: { error?: string } }) {
   return (
@@ -54,33 +18,7 @@ export default function DemoPage({ searchParams }: { searchParams: { error?: str
         ) : null}
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        {ROLES.map(({ role, title, blurb, Icon }) => (
-          <Card key={role} className="transition-shadow hover:shadow-md">
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-accent/10 text-accent">
-                  <Icon className="h-5 w-5" />
-                </div>
-                <CardTitle>{title}</CardTitle>
-              </div>
-              <CardDescription className="pt-1">{blurb}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form
-                action={async () => {
-                  "use server";
-                  await enterDemo(role);
-                }}
-              >
-                <Button type="submit" variant="accent" className="w-full">
-                  Enter as {title}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      <DemoRoleCards />
 
       <div className="mt-8 text-center">
         <Button asChild variant="ghost" size="sm">

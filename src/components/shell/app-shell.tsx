@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import { BottomTabs, SidebarNav } from "@/components/shell/sidebar-nav";
 import { UserMenu } from "@/components/shell/user-menu";
 import { Badge } from "@/components/ui/badge";
@@ -29,9 +31,17 @@ export function AppShell({
           </div>
         </div>
         {user.isDemo ? (
-          <Badge variant="accent" className="mt-3 w-fit">
-            Demo · {user.role}
-          </Badge>
+          <div className="mt-3 flex items-center gap-2">
+            <Badge variant="accent" className="w-fit">
+              Demo · {user.role}
+            </Badge>
+            <Link
+              href="/demo"
+              className="text-xs font-medium text-accent underline-offset-2 hover:underline"
+            >
+              Switch role
+            </Link>
+          </div>
         ) : null}
         <div className="mt-6 flex-1">
           <SidebarNav items={items} />
@@ -50,15 +60,19 @@ export function AppShell({
           </div>
           <span className="text-sm font-semibold">TSA OS</span>
           {user.isDemo ? (
-            <Badge variant="accent" className="ml-1">
-              Demo
-            </Badge>
+            <Link href="/demo" aria-label="Switch demo role">
+              <Badge variant="accent" className="ml-1">
+                Demo · Switch
+              </Badge>
+            </Link>
           ) : null}
         </div>
         <UserMenu name={user.name} email={user.email} image={user.image} isDemo={user.isDemo} />
       </header>
 
-      <main className="flex-1 px-4 py-6 pb-24 md:px-8 md:py-8 md:pb-8">{children}</main>
+      <main className="flex-1 px-4 py-6 pb-24 duration-300 animate-in fade-in md:px-8 md:py-8 md:pb-8">
+        {children}
+      </main>
 
       <BottomTabs items={items} />
     </div>

@@ -5,7 +5,7 @@ import { AlertTriangle, AlertCircle } from "lucide-react";
 import { api } from "@/trpc/react";
 
 export function AttentionList() {
-  const { data, isLoading } = api.admin.attentionList.useQuery();
+  const { data, isLoading } = api.admin.attentionList.useQuery(undefined, { staleTime: 60_000 });
 
   if (isLoading) {
     return (

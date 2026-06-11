@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { experimental_useObject as useObject } from "ai/react";
-import { Sparkles, RefreshCw, Sun, Dumbbell, AlertCircle } from "lucide-react";
+import { Sparkles, RefreshCw, Dumbbell, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -16,22 +16,6 @@ import { ProgressRing } from "./ProgressRing";
 // ---------------------------------------------------------------------------
 // Types mirroring Prisma results
 // ---------------------------------------------------------------------------
-type DbTask = {
-  id: string;
-  title: string;
-  plannedMinutes: number;
-  actualMinutes: number | null;
-  completed: boolean;
-  reason: string | null;
-  subject: { name: string };
-};
-
-type DbPlan = {
-  id: string;
-  totalMinutes: number;
-  tasks: DbTask[];
-};
-
 type TrainingSession = {
   id: string;
   drill: string;
@@ -71,29 +55,9 @@ function AfternoonFlip({ sessions }: { sessions: TrainingSession[] }) {
         </div>
       ) : (
         <div className="rounded-lg border border-dashed bg-muted/30 px-6 py-4 text-sm text-muted-foreground">
-          No sessions logged yet today — check back after training.
+          No training scheduled for this afternoon.
         </div>
       )}
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Evening summary
-// ---------------------------------------------------------------------------
-function EveningSummary({ plan }: { plan: DbPlan }) {
-  const done = plan.tasks.filter((t) => t.completed).length;
-  const total = plan.tasks.length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  return (
-    <div className="flex flex-col items-center gap-4 py-10 text-center">
-      <Sun className="h-10 w-10 text-yellow-400" />
-      <div>
-        <h2 className="text-xl font-bold">Day complete</h2>
-        <p className="mt-1 text-muted-foreground">
-          {done}/{total} tasks · {pct}% completion
-        </p>
-      </div>
     </div>
   );
 }
@@ -105,8 +69,12 @@ export function TodayView() {
   const utils = api.useUtils();
 
   // --- Server state ---
-  const { data: plan, isLoading: planLoading } = api.student.todayPlan.useQuery();
-  const { data: training } = api.student.todayTraining.useQuery();
+  const { data: plan, isLoading: planLoading } = api.student.todayPlan.useQuery(undefined, {
+    staleTime: 60_000,
+  });
+  const { data: training } = api.student.todayTraining.useQuery(undefined, {
+    staleTime: 60_000,
+  });
 
   // --- Local state ---
   const [isFallback, setIsFallback] = useState(false);
@@ -118,9 +86,6 @@ export function TodayView() {
     const allDone = plan.tasks.length > 0 && plan.tasks.every((t) => t.completed);
     if (allDone) setShowFlip(true);
   }, [plan]);
-
-  // Detect evening (after 18:00 local)
-  const isEvening = new Date().getHours() >= 18;
 
   // --- Mutations ---
   const persistPlan = api.student.persistPlan.useMutation({
@@ -150,7 +115,13 @@ export function TodayView() {
       }
     },
     onError: () => {
-      toast({ variant: "destructive", title: "Couldn't update task" });
+      // Revert optimistic check-off by re-syncing with server truth.
+      void utils.student.todayPlan.invalidate();
+      toast({
+        variant: "destructive",
+        title: "Couldn't update task",
+        description: "Your change didn't save — please try again.",
+      });
     },
   });
 
@@ -228,13 +199,6 @@ export function TodayView() {
         <Skeleton className="h-24 w-full rounded-lg" />
       </div>
     );
-  }
-
-  // ---------------------------------------------------------------------------
-  // EVENING STATE (after 18:00, plan exists)
-  // ---------------------------------------------------------------------------
-  if (isEvening && plan && !showFlip) {
-    return <EveningSummary plan={plan} />;
   }
 
   // ---------------------------------------------------------------------------
@@ -330,7 +294,7 @@ export function TodayView() {
         {isFallback && (
           <div className="flex items-center gap-2 rounded-lg border border-yellow-200 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
             <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>We reused yesterday&apos;s plan &mdash; AI was temporarily unavailable.</span>
+            <span>Using yesterday&apos;s plan &mdash; tap to regenerate.</span>
             <Button
               variant="ghost"
               size="sm"

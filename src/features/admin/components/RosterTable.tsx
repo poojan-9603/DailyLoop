@@ -36,7 +36,7 @@ interface Props {
 
 export function RosterTable({ onSelect }: Props) {
   const [query, setQuery] = useState("");
-  const { data, isLoading } = api.admin.roster.useQuery();
+  const { data, isLoading } = api.admin.roster.useQuery(undefined, { staleTime: 60_000 });
 
   const filtered = data?.filter((s) =>
     s.name.toLowerCase().includes(query.toLowerCase()) ||

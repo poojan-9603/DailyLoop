@@ -13,8 +13,14 @@ interface Props {
 export function ParentDayView({ initialStudentId, students }: Props) {
   const [selectedId, setSelectedId] = useState(initialStudentId);
 
-  const { data, isLoading } = api.parent.childDay.useQuery({ studentId: selectedId });
-  const { data: digests } = api.parent.recentDigests.useQuery({ studentId: selectedId });
+  const { data, isLoading } = api.parent.childDay.useQuery(
+    { studentId: selectedId },
+    { staleTime: 60_000 },
+  );
+  const { data: digests } = api.parent.recentDigests.useQuery(
+    { studentId: selectedId },
+    { staleTime: 60_000 },
+  );
 
   const selectedChild = students.find((c) => c.id === selectedId);
 

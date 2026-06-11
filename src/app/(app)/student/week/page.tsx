@@ -1,4 +1,16 @@
-import { WeekView } from "@/features/student/components/WeekView";
+"use client";
+
+import dynamic from "next/dynamic";
+
+// Recharts is heavy and client-only — load WeekView dynamically without SSR
+// to keep it out of the initial bundle.
+const WeekView = dynamic(
+  () => import("@/features/student/components/WeekView").then((m) => m.WeekView),
+  {
+    ssr: false,
+    loading: () => <div className="h-64 w-full animate-pulse rounded-xl bg-secondary/40" />,
+  },
+);
 
 export default function StudentWeekPage() {
   return (

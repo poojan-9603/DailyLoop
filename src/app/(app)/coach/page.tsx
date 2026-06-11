@@ -6,8 +6,8 @@ import { format } from "date-fns";
 export default async function CoachTodayPage() {
   const user = await getSessionUser();
   return (
-    <div className="mx-auto max-w-xl px-4 py-6 space-y-6 pb-20 md:pb-6">
-      <div>
+    <div className="mx-auto flex max-w-xl flex-col px-4 py-6 pb-20 md:pb-6">
+      <div className="order-1 mb-6">
         <p className="text-xs text-muted-foreground uppercase tracking-wide">
           {format(new Date(), "EEEE, MMMM d")}
         </p>
@@ -16,10 +16,14 @@ export default async function CoachTodayPage() {
         </h1>
       </div>
 
-      <SmartLogInput />
+      {/* On mobile the Smart Log sits last (thumb-reachable, sticky to the
+          bottom of the viewport); on desktop it returns just under the header. */}
+      <div className="sticky bottom-3 z-10 order-3 mt-6 md:static md:order-2 md:mt-0">
+        <SmartLogInput />
+      </div>
 
-      <section>
-        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+      <section className="order-2 md:order-3 md:mt-6">
+        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           Your Athletes Today
         </h2>
         <AthleteListWrapper />

@@ -5,7 +5,7 @@ import { AthleteCard } from "./AthleteCard";
 import { Users } from "lucide-react";
 
 export function AthleteListWrapper() {
-  const { data, isLoading } = api.coach.myAthletes.useQuery();
+  const { data, isLoading } = api.coach.myAthletes.useQuery(undefined, { staleTime: 60_000 });
 
   if (isLoading) {
     return (

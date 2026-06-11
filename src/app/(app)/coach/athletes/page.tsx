@@ -5,7 +5,7 @@ import { AthleteCard } from "@/features/coach/components/AthleteCard";
 import { Users } from "lucide-react";
 
 export default function CoachAthletesPage() {
-  const { data, isLoading } = api.coach.myAthletes.useQuery();
+  const { data, isLoading } = api.coach.myAthletes.useQuery(undefined, { staleTime: 60_000 });
 
   return (
     <div className="mx-auto max-w-xl px-4 py-6 space-y-4 pb-20 md:pb-6">

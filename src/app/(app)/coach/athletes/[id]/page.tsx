@@ -1,11 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { ArrowLeft, Loader2, Zap } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/trpc/react";
-import { DrillChart } from "@/features/coach/components/DrillChart";
 import { InsightCard } from "@/features/coach/components/InsightCard";
+
+// Recharts is client-only and heavy — load the chart without SSR.
+const DrillChart = dynamic(
+  () => import("@/features/coach/components/DrillChart").then((m) => m.DrillChart),
+  {
+    ssr: false,
+    loading: () => <div className="h-48 w-full animate-pulse rounded-xl bg-secondary/40" />,
+  },
+);
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -19,7 +28,10 @@ export default function AthleteDetailPage({ params }: Props) {
   const { toast } = useToast();
   const utils = api.useUtils();
 
-  const { data, isLoading } = api.coach.athleteDetail.useQuery({ studentId: id });
+  const { data, isLoading } = api.coach.athleteDetail.useQuery(
+    { studentId: id },
+    { staleTime: 60_000 },
+  );
 
   const insightMutation = api.coach.generateInsight.useMutation({
     onSuccess: (result) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CheckCircle2, Circle, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { TaskTimer } from "./TaskTimer";
@@ -31,6 +31,12 @@ export function TaskCard({
   streaming,
 }: TaskCardProps) {
   const [optimisticDone, setOptimisticDone] = useState(completed);
+
+  // Re-sync with server truth: if a mutation fails and the plan refetches,
+  // the `completed` prop reverts and the optimistic check-off follows.
+  useEffect(() => {
+    setOptimisticDone(completed);
+  }, [completed]);
 
   function handleToggle() {
     if (streaming) return;
