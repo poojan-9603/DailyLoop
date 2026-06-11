@@ -1,36 +1,35 @@
-import {
-  CalendarDays,
-  LayoutDashboard,
-  LineChart,
-  ListChecks,
-  Settings,
-  Users,
-  type LucideIcon,
-} from "lucide-react";
-
 import type { Role } from "@prisma/client";
+
+// Icon names are plain strings — resolved to Lucide components inside the
+// client component (sidebar-nav.tsx) so no function crosses the server/client boundary.
+export type NavIconName =
+  | "CalendarDays"
+  | "LayoutDashboard"
+  | "LineChart"
+  | "ListChecks"
+  | "Settings"
+  | "Users";
 
 export interface NavItem {
   href: string;
   label: string;
-  Icon: LucideIcon;
+  iconName: NavIconName;
 }
 
-/** Role-appropriate primary navigation. Phase 1 wires the "Today" home; later
- * phases fill in the rest of these routes. */
+/** Role-appropriate primary navigation. */
 export const NAV_BY_ROLE: Record<Role, NavItem[]> = {
   STUDENT: [
-    { href: "/student", label: "Today", Icon: ListChecks },
-    { href: "/student/week", label: "Week", Icon: LineChart },
+    { href: "/student", label: "Today", iconName: "ListChecks" },
+    { href: "/student/week", label: "Week", iconName: "LineChart" },
   ],
   COACH: [
-    { href: "/coach", label: "Today", Icon: ListChecks },
-    { href: "/coach/athletes", label: "Athletes", Icon: Users },
+    { href: "/coach", label: "Today", iconName: "ListChecks" },
+    { href: "/coach/athletes", label: "Athletes", iconName: "Users" },
   ],
-  PARENT: [{ href: "/parent", label: "Today", Icon: CalendarDays }],
+  PARENT: [{ href: "/parent", label: "Today", iconName: "CalendarDays" }],
   ADMIN: [
-    { href: "/admin", label: "Dashboard", Icon: LayoutDashboard },
-    { href: "/admin/roster", label: "Roster", Icon: Users },
-    { href: "/admin/settings", label: "Settings", Icon: Settings },
+    { href: "/admin", label: "Dashboard", iconName: "LayoutDashboard" },
+    { href: "/admin/roster", label: "Roster", iconName: "Users" },
+    { href: "/admin/settings", label: "Settings", iconName: "Settings" },
   ],
 };

@@ -31,3 +31,40 @@ export const PlanOutputSchema = z.object({
 
 export type PlanOutput = z.infer<typeof PlanOutputSchema>;
 export type PlanTask = z.infer<typeof PlanTaskSchema>;
+
+// ---------------------------------------------------------------------------
+// Smart Log Parser
+// ---------------------------------------------------------------------------
+
+export const SmartLogOutputSchema = z.object({
+  matchedStudentId: z.string().nullable().describe("Student ID if confident match, else null"),
+  studentName: z.string().describe("Name as extracted from input text"),
+  confidence: z.enum(["high", "medium", "low"]).describe("Match confidence against roster"),
+  drill: z.string().describe("Drill/exercise name (e.g. '40yd dash', 'bench press')"),
+  metricType: z.enum(["TIME", "REPS", "WEIGHT", "DISTANCE"]).describe("Metric category"),
+  value: z.number().describe("Numeric measurement value"),
+  unit: z.string().describe("Unit of measurement (e.g. 'seconds', 'lbs', 'reps', 'meters')"),
+  notes: z.string().optional().describe("Any coaching notes or observations from the input"),
+});
+
+export type SmartLogOutput = z.infer<typeof SmartLogOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// Digest Writer
+// ---------------------------------------------------------------------------
+
+export const DigestOutputSchema = z.object({
+  content: z.string().max(300).describe("Warm 3-sentence parent digest"),
+});
+
+export type DigestOutput = z.infer<typeof DigestOutputSchema>;
+
+// ---------------------------------------------------------------------------
+// Insight Phrasing
+// ---------------------------------------------------------------------------
+
+export const InsightPhraseSchema = z.object({
+  insight: z.string().max(140).describe("One-sentence coach-facing insight"),
+});
+
+export type InsightPhrase = z.infer<typeof InsightPhraseSchema>;

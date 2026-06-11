@@ -21,7 +21,7 @@ async function main() {
 
   console.log("Calling claude via Vercel AI SDK (generateObject)…");
   const { object } = await generateObject({
-    model: anthropic(process.env.AI_MODEL ?? "claude-sonnet-4-20250514"),
+    model: anthropic(process.env.AI_MODEL ?? "claude-sonnet-4-5"),
     schema: PingSchema,
     prompt: 'Reply with { "ok": true, "message": "TSA OS AI is live" }',
   });

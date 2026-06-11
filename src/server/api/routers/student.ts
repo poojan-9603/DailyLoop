@@ -53,7 +53,7 @@ export const studentRouter = createTRPCRouter({
             reason: z.string(),
           }),
         ),
-        aiModel: z.string().default("claude-sonnet-4-20250514"),
+        aiModel: z.string().default("claude-sonnet-4-5"),
         promptVersion: z.string().default(PROMPT_VERSION),
         isFallback: z.boolean().default(false),
       }),

@@ -2,9 +2,32 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  CalendarDays,
+  LayoutDashboard,
+  LineChart,
+  ListChecks,
+  Settings,
+  Users,
+} from "lucide-react";
 
-import type { NavItem } from "@/lib/nav";
+import type { NavIconName, NavItem } from "@/lib/nav";
 import { cn } from "@/lib/utils";
+
+// Icon lookup lives inside this client component — never crosses the server/client boundary.
+const ICONS: Record<NavIconName, React.ComponentType<{ className?: string }>> = {
+  CalendarDays,
+  LayoutDashboard,
+  LineChart,
+  ListChecks,
+  Settings,
+  Users,
+};
+
+function NavIcon({ name, className }: { name: NavIconName; className?: string }) {
+  const Icon = ICONS[name];
+  return <Icon className={className} />;
+}
 
 function isActive(pathname: string, href: string) {
   return pathname === href || (href !== "/" && pathname.startsWith(`${href}/`));
@@ -14,7 +37,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
     <nav className="flex flex-col gap-1">
-      {items.map(({ href, label, Icon }) => (
+      {items.map(({ href, label, iconName }) => (
         <Link
           key={href}
           href={href}
@@ -25,7 +48,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
               : "text-muted-foreground hover:bg-secondary/60 hover:text-foreground",
           )}
         >
-          <Icon className="h-4 w-4" />
+          <NavIcon name={iconName} className="h-4 w-4" />
           {label}
         </Link>
       ))}
@@ -37,7 +60,7 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex border-t bg-background md:hidden">
-      {items.map(({ href, label, Icon }) => (
+      {items.map(({ href, label, iconName }) => (
         <Link
           key={href}
           href={href}
@@ -46,7 +69,7 @@ export function BottomTabs({ items }: { items: NavItem[] }) {
             isActive(pathname, href) ? "text-accent" : "text-muted-foreground",
           )}
         >
-          <Icon className="h-5 w-5" />
+          <NavIcon name={iconName} className="h-5 w-5" />
           {label}
         </Link>
       ))}

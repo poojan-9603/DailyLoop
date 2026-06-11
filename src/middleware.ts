@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import type { Role } from "@prisma/client";
 
 import { verifyDemo } from "@/lib/demo-token";
+import { verifyMagic } from "@/lib/magic-token";
 import { edgeAuth } from "@/server/auth/edge";
 
 const DEMO_COOKIE = "tsa_demo";
+const PARENT_COOKIE = "tsa_parent";
 
 // Path prefix -> required role.
 const ROLE_BY_PREFIX: Array<{ prefix: string; role: Role }> = [
@@ -33,12 +35,21 @@ export default edgeAuth(async (req) => {
     const payload = await verifyDemo(demoToken, process.env.AUTH_SECRET ?? "");
     if (payload && payload.role === needed) return NextResponse.next();
     if (payload) {
-      // Wrong role for this area — bounce to their own home.
       return NextResponse.redirect(new URL(`/${payload.role.toLowerCase()}`, req.url));
     }
   }
 
-  // 2) Real Auth.js session (role decoded from the JWT).
+  // 2) Parent magic-link session.
+  if (needed === "PARENT") {
+    const parentToken = req.cookies.get(PARENT_COOKIE)?.value;
+    if (parentToken) {
+      const secret = process.env.MAGIC_LINK_SECRET ?? process.env.AUTH_SECRET ?? "";
+      const payload = await verifyMagic(parentToken, secret);
+      if (payload) return NextResponse.next();
+    }
+  }
+
+  // 3) Real Auth.js session (role decoded from the JWT).
   const role = req.auth?.user?.role;
   if (!role) {
     const signIn = new URL("/sign-in", req.url);

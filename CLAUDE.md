@@ -28,7 +28,7 @@ real auth, real AI, real background jobs, real error handling, demo mode, seed d
   (no Clerk — auth patterns are deliberately owned in-repo)
 - Anthropic Claude API via Vercel AI SDK (`ai` + `@ai-sdk/anthropic`):
   - `streamObject`/`generateObject` with Zod schemas for ALL structured AI outputs
-  - model: claude-sonnet-4-20250514 (configurable via env)
+  - model: claude-sonnet-4-5 (configurable via env)
 - Inngest for background jobs (nightly digest pipeline, insight generation)
 - Resend + React Email for the parent digest
 - Upstash Redis (`@upstash/ratelimit`) on all AI endpoints

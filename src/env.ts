@@ -29,7 +29,7 @@ export const env = createEnv({
 
     // --- Optional: AI (Phase 2+) ---
     ANTHROPIC_API_KEY: z.string().optional(),
-    AI_MODEL: z.string().default("claude-sonnet-4-20250514"),
+    AI_MODEL: z.string().default("claude-sonnet-4-5"),
 
     // --- Optional: email (Phase 4) ---
     RESEND_API_KEY: z.string().optional(),

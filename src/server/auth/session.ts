@@ -4,9 +4,11 @@ import type { Role } from "@prisma/client";
 
 import { env } from "@/env";
 import { verifyDemo } from "@/lib/demo-token";
+import { verifyMagic } from "@/lib/magic-token";
 import { auth } from "@/server/auth";
 
 export const DEMO_COOKIE = "tsa_demo";
+export const PARENT_COOKIE = "tsa_parent";
 
 export interface SessionUser {
   id: string;
@@ -39,6 +41,23 @@ export async function getSessionUser(): Promise<SessionUser | null> {
         image: null,
         role: payload.role,
         isDemo: true,
+      };
+    }
+  }
+
+  // Parent magic-link session
+  const parentCookie = cookies().get(PARENT_COOKIE)?.value;
+  if (parentCookie) {
+    const secret = env.MAGIC_LINK_SECRET ?? env.AUTH_SECRET;
+    const payload = await verifyMagic(parentCookie, secret);
+    if (payload) {
+      return {
+        id: payload.userId,
+        name: payload.name,
+        email: null,
+        image: null,
+        role: "PARENT" as Role,
+        isDemo: false,
       };
     }
   }
