@@ -19,22 +19,38 @@ function screenshotExists(file: string) {
 function Screenshot({ file, alt, label }: { file: string; alt: string; label: string }) {
   const exists = screenshotExists(file);
   return (
-    <figure className="overflow-hidden rounded-xl border shadow-lg ring-1 ring-black/[0.03]">
-      {exists ? (
-        <Image
-          src={`/screenshots/${file}`}
-          alt={alt}
-          width={1280}
-          height={800}
-          sizes="(min-width: 640px) 33vw, 100vw"
-          className="h-auto w-full"
-        />
-      ) : (
-        <div className="flex aspect-[16/10] items-center justify-center bg-secondary/60">
-          <span className="text-xs font-medium text-muted-foreground">{label} preview</span>
+    <Link href="/demo" className="group block focus-visible:outline-none">
+      <figure className="overflow-hidden rounded-xl border bg-card shadow-md ring-1 ring-black/[0.03] transition-all duration-300 group-hover:-translate-y-1.5 group-hover:shadow-2xl group-hover:ring-accent/40 group-focus-visible:ring-2 group-focus-visible:ring-accent">
+        {/* Faux browser chrome — makes each shot read as a real app window */}
+        <div className="flex items-center gap-1.5 border-b bg-secondary/50 px-3 py-2">
+          <span className="h-2.5 w-2.5 rounded-full bg-red-400/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-yellow-400/70" />
+          <span className="h-2.5 w-2.5 rounded-full bg-green-400/70" />
+          <span className="ml-2 text-[11px] font-medium text-muted-foreground">{label}</span>
         </div>
-      )}
-    </figure>
+        <div className="relative aspect-[16/10] overflow-hidden">
+          {exists ? (
+            <Image
+              src={`/screenshots/${file}`}
+              alt={alt}
+              fill
+              sizes="(min-width: 640px) 33vw, 100vw"
+              className="object-cover object-top transition-transform duration-500 ease-out group-hover:scale-[1.05]"
+            />
+          ) : (
+            <div className="flex h-full items-center justify-center bg-secondary/60">
+              <span className="text-xs font-medium text-muted-foreground">{label} preview</span>
+            </div>
+          )}
+          {/* Hover overlay CTA */}
+          <div className="pointer-events-none absolute inset-0 flex items-end justify-center bg-gradient-to-t from-foreground/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100">
+            <span className="mb-3 rounded-full bg-background/95 px-3 py-1 text-xs font-semibold text-foreground shadow-sm">
+              Open in demo →
+            </span>
+          </div>
+        </div>
+      </figure>
+    </Link>
   );
 }
 
@@ -134,7 +150,7 @@ export default function LandingPage() {
           </div>
 
           {/* Product screenshots */}
-          <div className="mx-auto mt-14 grid max-w-5xl gap-4 text-left sm:grid-cols-3">
+          <div className="mx-auto mt-16 grid max-w-6xl gap-6 text-left sm:grid-cols-3">
             {SCREENSHOTS.map((s, i) => (
               <div
                 key={s.file}
