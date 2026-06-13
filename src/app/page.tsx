@@ -1,133 +1,64 @@
-import { ArrowRight, CheckCircle2, Circle, Sparkles, Wand2, Dumbbell, TrendingUp } from "lucide-react";
+import { existsSync } from "fs";
+import path from "path";
+
+import { ArrowRight, PlayCircle, Sparkles, Dumbbell, TrendingUp } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { env } from "@/env";
 
 // ---------------------------------------------------------------------------
-// Tiny realistic product previews (pure CSS — no screenshots)
+// Product screenshots (real images, with a clean build-time fallback)
 // ---------------------------------------------------------------------------
 
-function MiniRing({ pct }: { pct: number }) {
-  const r = 18;
-  const c = 2 * Math.PI * r;
-  const offset = c - (pct / 100) * c;
-  return (
-    <svg width="48" height="48" viewBox="0 0 48 48" className="-rotate-90">
-      <circle cx="24" cy="24" r={r} fill="none" strokeWidth="5" className="stroke-secondary" />
-      <circle
-        cx="24"
-        cy="24"
-        r={r}
-        fill="none"
-        strokeWidth="5"
-        strokeLinecap="round"
-        strokeDasharray={c}
-        strokeDashoffset={offset}
-        className="stroke-accent"
-      />
-    </svg>
-  );
+function screenshotExists(file: string) {
+  return existsSync(path.join(process.cwd(), "public", "screenshots", file));
 }
 
-function PreviewFrame({ children }: { children: React.ReactNode }) {
+function Screenshot({ file, alt, label }: { file: string; alt: string; label: string }) {
+  const exists = screenshotExists(file);
   return (
-    <div className="rounded-xl border bg-card p-4 shadow-sm ring-1 ring-black/[0.02]">{children}</div>
-  );
-}
-
-function StudentPreview() {
-  const tasks = [
-    { subject: "Algebra", title: "Quadratics set 3B", done: true },
-    { subject: "Biology", title: "Cell respiration notes", done: true },
-    { subject: "English", title: "Essay outline", done: false },
-  ];
-  return (
-    <PreviewFrame>
-      <div className="flex items-center gap-3">
-        <MiniRing pct={67} />
-        <div>
-          <p className="text-sm font-semibold">Today&apos;s study block</p>
-          <p className="text-xs text-muted-foreground">2 of 3 tasks · 110 min</p>
+    <figure className="overflow-hidden rounded-xl border shadow-lg ring-1 ring-black/[0.03]">
+      {exists ? (
+        <Image
+          src={`/screenshots/${file}`}
+          alt={alt}
+          width={1280}
+          height={800}
+          sizes="(min-width: 640px) 33vw, 100vw"
+          className="h-auto w-full"
+        />
+      ) : (
+        <div className="flex aspect-[16/10] items-center justify-center bg-secondary/60">
+          <span className="text-xs font-medium text-muted-foreground">{label} preview</span>
         </div>
-      </div>
-      <div className="mt-3 space-y-2">
-        {tasks.map((t) => (
-          <div key={t.title} className="flex items-center gap-2 rounded-lg border bg-background/60 px-2.5 py-2">
-            {t.done ? (
-              <CheckCircle2 className="h-4 w-4 shrink-0 text-accent" />
-            ) : (
-              <Circle className="h-4 w-4 shrink-0 text-muted-foreground" />
-            )}
-            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-              {t.subject}
-            </span>
-            <span className={`truncate text-xs ${t.done ? "text-muted-foreground line-through" : ""}`}>
-              {t.title}
-            </span>
-          </div>
-        ))}
-      </div>
-    </PreviewFrame>
+      )}
+    </figure>
   );
 }
 
-function CoachPreview() {
-  return (
-    <PreviewFrame>
-      <div className="flex items-center gap-2">
-        <Wand2 className="h-4 w-4 text-accent" />
-        <p className="text-sm font-semibold">Smart Log</p>
-      </div>
-      <div className="mt-3 rounded-lg border bg-background/60 px-3 py-2 text-xs text-muted-foreground">
-        &ldquo;marcus 40yd 4.92, slight knee drop on start&rdquo;
-      </div>
-      <div className="mt-2 flex items-center gap-1.5 text-[11px]">
-        <span className="text-muted-foreground">→</span>
-        <span className="rounded-md bg-accent/10 px-2 py-1 font-medium text-accent">Marcus Hill</span>
-        <span className="rounded-md bg-secondary px-2 py-1 font-medium">40yd dash</span>
-        <span className="rounded-md bg-secondary px-2 py-1 font-medium tabular-nums">4.92s</span>
-      </div>
-      <p className="mt-2 text-[11px] text-muted-foreground">Note: slight knee drop on start</p>
-    </PreviewFrame>
-  );
-}
-
-function ParentPreview() {
-  return (
-    <PreviewFrame>
-      <div className="flex items-center gap-3">
-        <MiniRing pct={88} />
-        <div>
-          <p className="text-sm font-semibold">Marcus&apos;s day</p>
-          <p className="text-xs text-muted-foreground">Tonight&apos;s digest</p>
-        </div>
-      </div>
-      <p className="mt-3 text-xs leading-relaxed text-foreground/80">
-        Marcus finished <span className="font-semibold text-foreground">88%</span> of his study plan and
-        shaved 0.07s off his 40-yard dash. He stayed focused through a tough biology set — proud of him today.
-      </p>
-    </PreviewFrame>
-  );
-}
+const SCREENSHOTS = [
+  { file: "student.png", alt: "Student daily study plan", label: "Student" },
+  { file: "coach.png", alt: "Coach Smart Log and athlete insights", label: "Coach" },
+  { file: "parent.png", alt: "Parent nightly digest", label: "Parent" },
+];
 
 const FEATURES = [
   {
     Icon: Sparkles,
     title: "AI-planned mornings",
     note: "A 2-hour study block, generated fresh each day and weighted to what each student needs most.",
-    Preview: StudentPreview,
   },
   {
     Icon: Dumbbell,
     title: "Seconds-fast coaching",
     note: "Coaches type one messy line; AI structures the drill, metric, and athlete in real time.",
-    Preview: CoachPreview,
   },
   {
     Icon: TrendingUp,
     title: "Two domains, one signal",
     note: "Academic completion and athletic performance correlate — surfaced as plain-language insights.",
-    Preview: ParentPreview,
   },
 ];
 
@@ -139,6 +70,9 @@ const LOOP = [
 ];
 
 export default function LandingPage() {
+  const walkthroughUrl = env.NEXT_PUBLIC_WALKTHROUGH_URL;
+  const githubUrl = env.NEXT_PUBLIC_GITHUB_URL;
+
   return (
     <div className="flex flex-col">
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
@@ -173,35 +107,43 @@ export default function LandingPage() {
             AI-native operating system for student-athletes
           </div>
           <h1 className="mx-auto max-w-3xl text-balance text-4xl font-bold tracking-tight sm:text-6xl">
-            Where academics and athletics{" "}
-            <span className="text-gradient">feed each other</span>
+            Where academics and athletics <span className="text-gradient">feed each other</span>
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg text-muted-foreground">
             Two hours of AI-planned academics in the morning, training in the afternoon — one daily
             loop across four roles, with the data from each side making the other smarter.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-3">
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <Button asChild size="lg" variant="accent" className="gap-2">
               <Link href="/demo">
                 Try the live demo <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link href="/built-with-ai">How it&apos;s built</Link>
-            </Button>
+            {walkthroughUrl ? (
+              <Button asChild size="lg" variant="outline" className="gap-2">
+                <a href={walkthroughUrl} target="_blank" rel="noopener noreferrer">
+                  <PlayCircle className="h-4 w-4" />
+                  Watch the walkthrough
+                </a>
+              </Button>
+            ) : (
+              <Button asChild size="lg" variant="outline">
+                <Link href="/built-with-ai">How it&apos;s built</Link>
+              </Button>
+            )}
           </div>
 
-          {/* Floating product previews */}
+          {/* Product screenshots */}
           <div className="mx-auto mt-14 grid max-w-5xl gap-4 text-left sm:grid-cols-3">
-            <div className="animate-fade-in">
-              <StudentPreview />
-            </div>
-            <div className="animate-fade-in [animation-delay:120ms] sm:mt-6">
-              <CoachPreview />
-            </div>
-            <div className="animate-fade-in [animation-delay:240ms]">
-              <ParentPreview />
-            </div>
+            {SCREENSHOTS.map((s, i) => (
+              <div
+                key={s.file}
+                className="animate-fade-in"
+                style={{ animationDelay: `${i * 120}ms` }}
+              >
+                <Screenshot file={s.file} alt={s.alt} label={s.label} />
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -262,9 +204,16 @@ export default function LandingPage() {
             <Link href="/built-with-ai" className="hover:text-foreground">
               Built with AI
             </Link>
-            <a href="https://github.com" className="hover:text-foreground">
-              GitHub
-            </a>
+            {githubUrl ? (
+              <a
+                href={githubUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-foreground"
+              >
+                GitHub
+              </a>
+            ) : null}
           </div>
         </div>
       </footer>

@@ -36,6 +36,14 @@ The app **boots without optional keys** (AI, email, Redis, analytics, Sentry, ev
 Google OAuth). Minimum required: `DATABASE_URL`, `DIRECT_URL`, `AUTH_SECRET`. Without
 Google creds, use **Demo mode** at `/demo`.
 
+### 📺 Watch the walkthrough
+
+A 2-minute walkthrough link can be surfaced as a **"Watch the walkthrough"** button in
+the landing hero — set `NEXT_PUBLIC_WALKTHROUGH_URL` to a Loom/YouTube link (the button
+hides itself if unset). Likewise `NEXT_PUBLIC_GITHUB_URL` controls the footer GitHub link.
+
+> **Walkthrough:** _add your Loom/YouTube link here once recorded._
+
 ### Supabase connection strings
 
 Use the **Transaction pooler** string for `DATABASE_URL` (port 6543, `?pgbouncer=true`).
