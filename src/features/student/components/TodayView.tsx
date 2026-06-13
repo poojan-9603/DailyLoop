@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { experimental_useObject as useObject } from "ai/react";
-import { Sparkles, RefreshCw, Dumbbell, AlertCircle, ArrowLeft } from "lucide-react";
+import { Sparkles, RefreshCw, Dumbbell, AlertCircle, ArrowLeft, Clock, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
@@ -21,8 +21,77 @@ type TrainingSession = {
   drill: string;
   value: number;
   unit: string;
+  createdAt: Date;
   coach: { user: { name: string | null } };
 };
+
+// ---------------------------------------------------------------------------
+// "This afternoon" preview — surfaces the athletic half of the daily loop
+// up front, alongside the study block (not gated behind task completion).
+// ---------------------------------------------------------------------------
+function AfternoonPreview({
+  sessions,
+  tasksComplete,
+}: {
+  sessions: TrainingSession[];
+  tasksComplete: boolean;
+}) {
+  const first = sessions[0];
+  const scheduledTime = first
+    ? new Date(first.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+    : null;
+
+  return (
+    <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
+      <div className="flex items-center gap-2">
+        <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/15 text-accent">
+          <Dumbbell className="h-4 w-4" />
+        </div>
+        <h3 className="text-sm font-semibold">This afternoon — Training</h3>
+        {scheduledTime && (
+          <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+            <Clock className="h-3 w-3" />
+            {scheduledTime}
+          </span>
+        )}
+      </div>
+
+      {sessions.length === 0 ? (
+        <p className="mt-3 text-sm text-muted-foreground">No training scheduled this afternoon.</p>
+      ) : (
+        <>
+          <ul className="mt-3 space-y-1.5">
+            {sessions.map((s) => (
+              <li key={s.id} className="text-sm">
+                <span className="font-medium">{s.drill}</span>{" "}
+                <span className="text-muted-foreground">· Coach {s.coach.user.name ?? "TBA"}</span>
+                {tasksComplete && (
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — {s.value} {s.unit}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+            {tasksComplete ? (
+              <>
+                <Dumbbell className="h-3 w-3 text-accent" />
+                Academics done — training details unlocked.
+              </>
+            ) : (
+              <>
+                <Lock className="h-3 w-3" />
+                Finish your 2 hours to unlock training details.
+              </>
+            )}
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Afternoon flip panel
@@ -368,6 +437,7 @@ export function TodayView() {
           />
           <div>
             <h2 className="text-lg font-semibold">Today&apos;s study block</h2>
+            <p className="text-xs font-medium text-accent">Morning: academics · Afternoon: training</p>
             <p className="text-sm text-muted-foreground">
               {completedCount}/{totalCount} tasks · {totalPlanned} min planned
             </p>
@@ -400,6 +470,12 @@ export function TodayView() {
             />
           ))}
         </div>
+
+        {/* This afternoon — surfaces the athletic half up front */}
+        <AfternoonPreview
+          sessions={training ?? []}
+          tasksComplete={totalCount > 0 && completedCount === totalCount}
+        />
 
         {/* Re-generate option (after plan saved) */}
         {!isFallback && (
