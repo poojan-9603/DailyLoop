@@ -7,100 +7,127 @@ export const metadata = {
 };
 
 const EVAL_RESULTS = [
-  { suite: "Smart Log Parser", cases: "25 messy inputs", pass: "96%" },
-  { suite: "Plan Generator", cases: "10 student profiles", pass: "100%" },
+  { eval: "Smart Log parser — 25 messy, real-world coach inputs", pass: "96%" },
+  { eval: "Study plan generator — 10 student profiles", pass: "100%" },
 ];
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <h2 className="text-xl font-semibold tracking-tight">{title}</h2>
-      <div className="space-y-4 text-[15px] leading-relaxed text-muted-foreground">{children}</div>
-    </section>
-  );
-}
 
 export default function BuiltWithAiPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">
-      <Button asChild variant="ghost" size="sm" className="mb-8 -ml-2">
+      <Button asChild variant="ghost" size="sm" className="mb-10 -ml-2">
         <Link href="/">← Home</Link>
       </Button>
 
-      <header className="space-y-3">
-        <h1 className="text-4xl font-bold tracking-tight">Built with AI</h1>
-        <p className="text-lg text-muted-foreground">
-          An honest write-up of the AI-assisted development workflow behind TSA OS.
+      <article className="text-[16px] leading-[1.75] text-muted-foreground">
+        <h1 className="text-4xl font-bold tracking-tight text-foreground">Built with AI</h1>
+
+        <p className="mt-6">
+          I&apos;ll be honest about how this was built, because for a role like this the process
+          matters as much as the result.
         </p>
-      </header>
+        <p className="mt-4">
+          AI was in the loop the whole way through. But I want to be precise about what that means:
+          the AI did a lot of the typing, and I made all of the decisions. The difference is the
+          entire point.
+        </p>
 
-      <div className="mt-12 space-y-12">
-        <Section title="Tools I used">
-          <p>
-            <span className="italic">Replace this with your real account.</span> A typical answer
-            covers the coding assistant and model that wrote the bulk of the app, the AI SDK powering
-            the in-product features, and any design or asset tools.
-          </p>
-        </Section>
+        <h2 className="mt-12 text-2xl font-semibold tracking-tight text-foreground">How I worked</h2>
+        <p className="mt-4">
+          I used Claude in two modes. One was a thinking partner — scoping the product, arguing
+          through architecture, pressure-testing what to build and what to cut. The other was Claude
+          Code, generating implementation against specs I wrote.
+        </p>
+        <p className="mt-4">
+          The thing that made this work was treating a single spec file as the contract. Schema,
+          conventions, constraints, the things I&apos;d decided not to do — all of it lived in one
+          place the AI read at the start of every session. That&apos;s what kept a multi-day,
+          multi-session build coherent instead of drifting. Without it, each session reinvents
+          decisions and you end up with five slightly different versions of the same idea.
+        </p>
 
-        <Section title="What AI wrote vs. what I wrote">
-          <p>
-            <span className="italic">Replace this with your real breakdown.</span> Describe which
-            layers were largely AI-generated (scaffolding, routers, components) and which decisions
-            stayed human — architecture, the Prisma schema, the AI feature design, and prompt
-            engineering.
-          </p>
-        </Section>
+        <h2 className="mt-12 text-2xl font-semibold tracking-tight text-foreground">
+          What was mine vs. the AI&apos;s
+        </h2>
+        <p className="mt-4">
+          Mine: the core bet that academic and athletic data should feed each other, and the insight
+          engine that acts on it. The call to make parent access passwordless, because parents
+          won&apos;t remember a login and a read-only view doesn&apos;t need one. Pinning to Next 14
+          instead of the newest release, because the auth and tRPC ecosystem isn&apos;t stable on the
+          bleeding edge and shipping mattered more than version numbers. Running insights on demand
+          instead of as background jobs, to keep the system legible. The four-role structure itself.
+        </p>
+        <p className="mt-4">
+          The AI&apos;s: a lot of the component and route code, written against those decisions. I
+          reviewed and tested every phase before moving to the next one. I never shipped something I
+          hadn&apos;t read.
+        </p>
 
-        <Section title="Two places AI failed">
-          <p>
-            <span className="italic">Replace this with two concrete failures and how you fixed
-            them.</span> Good candidates are the React Server/Client boundary error from passing
-            icon components across the boundary, and the AI-SDK version mismatch that removed the
-            streaming hook.
-          </p>
-        </Section>
+        <h2 className="mt-12 text-2xl font-semibold tracking-tight text-foreground">
+          Where the AI got it wrong — and how I caught it
+        </h2>
+        <p className="mt-4">This is the part I&apos;d actually want to be asked about.</p>
+        <p className="mt-4">
+          <strong className="font-semibold text-foreground">
+            It invented an API model name that doesn&apos;t exist.
+          </strong>{" "}
+          The generated code referenced a model string that looked plausible and was completely
+          wrong. It compiled. It passed type checks. It passed the build. The only reason I caught it
+          is that I&apos;d written an eval suite for the AI features, and the parser scored 0 out of
+          25. I traced it to a stale value, fixed the string, and the same suite jumped to 96%. The
+          lesson stuck with me: a green build tells you nothing about whether your AI features
+          actually work. You need tests that exercise the real thing.
+        </p>
+        <p className="mt-4">
+          <strong className="font-semibold text-foreground">
+            A database seed quietly half-finished.
+          </strong>{" "}
+          It ran through a connection pooler, died partway, and left me with study plans but zero
+          training sessions — and it never threw a visible error. &ldquo;Completed&rdquo; is not the
+          same as &ldquo;correct.&rdquo; I only found it because I opened the data and looked instead
+          of trusting the success message. Switched the seed to a direct connection and it ran clean.
+        </p>
+        <p className="mt-4">
+          Both bugs share a theme, and it&apos;s the thing I believe about building with AI: the
+          model is fast and confident, and confidence isn&apos;t correctness. The value I add is
+          knowing what to verify and actually verifying it.
+        </p>
 
-        <Section title="How prompts are versioned and evaled">
-          <p>
-            Every prompt lives in <code className="rounded bg-muted px-1.5 py-0.5 text-sm">src/ai/prompts/*.ts</code>{" "}
-            as a versioned template function with a <code className="rounded bg-muted px-1.5 py-0.5 text-sm">PROMPT_VERSION</code>{" "}
-            constant, stored alongside each generated record so model output can be traced back to the
-            exact prompt that produced it.
-          </p>
-          <p>
-            Assertions are code, not AI-graded — Zod schema validation plus hard rules (task counts,
-            minute totals, fuzzy-name matching). Latest pass rates:
-          </p>
+        <h2 className="mt-12 text-2xl font-semibold tracking-tight text-foreground">
+          Treating prompts like code
+        </h2>
+        <p className="mt-4">
+          The prompts live in the repo, versioned, the same as any other source file. Every AI
+          output is validated against a schema with a retry and a graceful fallback, so a malformed
+          response never reaches a user as a broken screen. And the two AI features have an eval
+          suite I can run on demand:
+        </p>
 
-          <div className="overflow-hidden rounded-xl border">
-            <table className="w-full text-sm">
-              <thead className="bg-secondary/50 text-foreground">
-                <tr>
-                  <th className="px-4 py-2.5 text-left font-medium">Eval suite</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Coverage</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Pass rate</th>
+        <div className="mt-6 overflow-hidden rounded-xl border">
+          <table className="w-full text-sm">
+            <thead className="bg-secondary/50 text-foreground">
+              <tr>
+                <th className="px-4 py-3 text-left font-medium">Eval</th>
+                <th className="px-4 py-3 text-right font-medium">Pass rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {EVAL_RESULTS.map((r) => (
+                <tr key={r.eval} className="border-t">
+                  <td className="px-4 py-3 text-foreground">{r.eval}</td>
+                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-accent">
+                    {r.pass}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {EVAL_RESULTS.map((r) => (
-                  <tr key={r.suite} className="border-t">
-                    <td className="px-4 py-2.5 font-medium text-foreground">{r.suite}</td>
-                    <td className="px-4 py-2.5 text-muted-foreground">{r.cases}</td>
-                    <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-accent">
-                      {r.pass}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <p className="text-sm">
-            Reproduce with <code className="rounded bg-muted px-1.5 py-0.5">npm run evals</code>{" "}
-            (requires an Anthropic key and a seeded database).
-          </p>
-        </Section>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-6">
+          That suite isn&apos;t decoration. It&apos;s what caught the model-string bug before a single
+          user would have hit it.
+        </p>
+      </article>
     </main>
   );
 }
