@@ -101,7 +101,7 @@ export default function LandingPage() {
           </div>
           <nav className="flex items-center gap-1.5">
             <Button asChild variant="ghost" size="sm">
-              <Link href="/built-with-ai">Built with AI</Link>
+              <Link href="/built-with-ai">Who Made it?</Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
               <Link href="/sign-in">Sign in</Link>
@@ -218,7 +218,7 @@ export default function LandingPage() {
           <span>© {new Date().getFullYear()} Texas Sports Academy — Demo</span>
           <div className="flex gap-4">
             <Link href="/built-with-ai" className="hover:text-foreground">
-              Built with AI
+              Who Made it?
             </Link>
             {githubUrl ? (
               <a

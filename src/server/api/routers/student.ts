@@ -231,6 +231,45 @@ export const studentRouter = createTRPCRouter({
     return sessions;
   }),
 
+  /**
+   * Afternoon training for the Today view. Training is logged by coaches in the
+   * afternoon, so "today" often has no row yet — rather than dead-ending on an
+   * empty state, fall back to the most recent training day so the athletic half
+   * of the daily loop is always visible. `isToday` lets the UI label it honestly.
+   */
+  afternoonTraining: studentProcedure.query(async ({ ctx }) => {
+    const student = await requireStudent(ctx.db, ctx.user.id);
+    const include = { coach: { include: { user: { select: { name: true } } } } } as const;
+    const today = todayDate();
+
+    const todays = await ctx.db.trainingSession.findMany({
+      where: { studentId: student.id, date: today },
+      include,
+      orderBy: { createdAt: "asc" },
+    });
+    if (todays.length > 0) {
+      return { sessions: todays, isToday: true, date: today.toISOString().split("T")[0]! };
+    }
+
+    const latest = await ctx.db.trainingSession.findFirst({
+      where: { studentId: student.id },
+      orderBy: { date: "desc" },
+      select: { date: true },
+    });
+    if (!latest) return { sessions: [], isToday: false, date: null };
+
+    const recent = await ctx.db.trainingSession.findMany({
+      where: { studentId: student.id, date: latest.date },
+      include,
+      orderBy: { createdAt: "asc" },
+    });
+    return {
+      sessions: recent,
+      isToday: false,
+      date: latest.date.toISOString().split("T")[0]!,
+    };
+  }),
+
   /** 7-day completion bars + per-subject stats for the Week sub-view. */
   weekData: studentProcedure.query(async ({ ctx }) => {
     const student = await requireStudent(ctx.db, ctx.user.id);

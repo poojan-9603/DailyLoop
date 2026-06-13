@@ -29,17 +29,29 @@ type TrainingSession = {
 // "This afternoon" preview — surfaces the athletic half of the daily loop
 // up front, alongside the study block (not gated behind task completion).
 // ---------------------------------------------------------------------------
+function formatDay(date: string): string {
+  // date is "YYYY-MM-DD"; pin to local noon to avoid timezone day-shifts.
+  return new Date(`${date}T12:00:00`).toLocaleDateString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function AfternoonPreview({
   sessions,
+  isToday,
+  date,
   tasksComplete,
 }: {
   sessions: TrainingSession[];
+  isToday: boolean;
+  date: string | null;
   tasksComplete: boolean;
 }) {
-  const first = sessions[0];
-  const scheduledTime = first
-    ? new Date(first.createdAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
-    : null;
+  // Historical sessions (not today) are already in the past, so their details
+  // are always shown; today's details stay gated behind finishing academics.
+  const showDetails = isToday ? tasksComplete : true;
 
   return (
     <div className="rounded-lg border border-accent/30 bg-accent/5 p-4">
@@ -47,11 +59,13 @@ function AfternoonPreview({
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-accent/15 text-accent">
           <Dumbbell className="h-4 w-4" />
         </div>
-        <h3 className="text-sm font-semibold">This afternoon — Training</h3>
-        {scheduledTime && (
+        <h3 className="text-sm font-semibold">
+          {isToday ? "This afternoon — Training" : "Recent training"}
+        </h3>
+        {date && (
           <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
             <Clock className="h-3 w-3" />
-            {scheduledTime}
+            {isToday ? "This afternoon" : formatDay(date)}
           </span>
         )}
       </div>
@@ -65,7 +79,7 @@ function AfternoonPreview({
               <li key={s.id} className="text-sm">
                 <span className="font-medium">{s.drill}</span>{" "}
                 <span className="text-muted-foreground">· Coach {s.coach.user.name ?? "TBA"}</span>
-                {tasksComplete && (
+                {showDetails && (
                   <span className="text-muted-foreground">
                     {" "}
                     — {s.value} {s.unit}
@@ -75,7 +89,12 @@ function AfternoonPreview({
             ))}
           </ul>
           <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-            {tasksComplete ? (
+            {!isToday ? (
+              <>
+                <Dumbbell className="h-3 w-3 text-accent" />
+                Most recent session — today&apos;s training appears once your coach logs it.
+              </>
+            ) : tasksComplete ? (
               <>
                 <Dumbbell className="h-3 w-3 text-accent" />
                 Academics done — training details unlocked.
@@ -98,11 +117,15 @@ function AfternoonPreview({
 // ---------------------------------------------------------------------------
 function AfternoonFlip({
   sessions,
+  isToday,
+  date,
   onBack,
   onRegenerate,
   regenerating,
 }: {
   sessions: TrainingSession[];
+  isToday: boolean;
+  date: string | null;
   onBack: () => void;
   onRegenerate: () => void;
   regenerating: boolean;
@@ -126,8 +149,8 @@ function AfternoonFlip({
       </div>
       {sessions.length > 0 ? (
         <div className="w-full max-w-sm rounded-lg border bg-card p-4 text-left">
-          <p className="mb-3 text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-            Today&apos;s training
+          <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {isToday ? "Today's training" : `Recent training${date ? ` · ${formatDay(date)}` : ""}`}
           </p>
           <ul className="space-y-2">
             {sessions.map((s) => (
@@ -170,9 +193,12 @@ export function TodayView() {
   const { data: plan, isLoading: planLoading } = api.student.todayPlan.useQuery(undefined, {
     staleTime: 60_000,
   });
-  const { data: training } = api.student.todayTraining.useQuery(undefined, {
+  const { data: afternoon } = api.student.afternoonTraining.useQuery(undefined, {
     staleTime: 60_000,
   });
+  const trainingSessions = afternoon?.sessions ?? [];
+  const trainingIsToday = afternoon?.isToday ?? false;
+  const trainingDate = afternoon?.date ?? null;
 
   // --- Local state ---
   const [isFallback, setIsFallback] = useState(false);
@@ -326,7 +352,9 @@ export function TodayView() {
         )}
       >
         <AfternoonFlip
-          sessions={training ?? []}
+          sessions={trainingSessions}
+          isToday={trainingIsToday}
+          date={trainingDate}
           onBack={() => setShowFlip(false)}
           onRegenerate={handleRegenerate}
           regenerating={isStreaming}
@@ -473,7 +501,9 @@ export function TodayView() {
 
         {/* This afternoon — surfaces the athletic half up front */}
         <AfternoonPreview
-          sessions={training ?? []}
+          sessions={trainingSessions}
+          isToday={trainingIsToday}
+          date={trainingDate}
           tasksComplete={totalCount > 0 && completedCount === totalCount}
         />
 
